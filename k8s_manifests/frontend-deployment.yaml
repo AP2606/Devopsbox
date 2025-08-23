@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: devops-frontend
-        image: devopsfrontend:midsem # Replace with your registry if you push it (e.g., dockerhub/ghcr)
+        image: devopsfrontend:midsemv2 # Replace with your registry if you push it (e.g., dockerhub/ghcr)
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
