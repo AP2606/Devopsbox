@@ -1,4 +1,1 @@
-export const formatDate = (dateStr) => {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString();
-};
+export const formatDifficulty = (d='') => d.charAt(0).toUpperCase() + d.slice(1)

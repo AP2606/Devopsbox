@@ -4,11 +4,11 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# Dummy challenge data for midsem demo
+# Dummy challenge data for midsem 
 CHALLENGES = [
-    {"id": 1, "title": "Fix Broken CI Pipeline", "category": "CI/CD", "difficulty": "Medium", "status": "pending"},
-    {"id": 2, "title": "Debug Dockerfile", "category": "Docker", "difficulty": "Easy", "status": "pending"},
-    {"id": 3, "title": "Kubernetes Misconfigured Deployment", "category": "Kubernetes", "difficulty": "Hard", "status": "pending"}
+    {"id": 1, "title": "Fix Broken CI Pipeline", "category": "CI/CD", "difficulty": "Medium", "status": "Yet to Start"},
+    {"id": 2, "title": "Debug Dockerfile", "category": "Docker", "difficulty": "Easy", "status": "Yet to Start"},
+    {"id": 3, "title": "Kubernetes Misconfigured Deployment", "category": "Kubernetes", "difficulty": "Hard", "status": "Yet to Start"}
 ]
 
 @app.get("/")
@@ -20,8 +20,16 @@ def health():
     return jsonify({"status": "healthy"})
 
 @app.get("/api/challenges")
-def challenges():
+def get_challenges():
     return jsonify(CHALLENGES)
+
+@app.get("/api/challenges/<int:challenge_id>")
+def get_challenge_by_id(challenge_id):
+    challenge = next((ch for ch in CHALLENGES if ch["id"] == challenge_id), None)
+    if challenge:
+        return jsonify(challenge)
+    return jsonify({"error": "Challenge not found"}), 404
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+

@@ -1,18 +1,20 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from 'react'
+import api from '../services/api'
 
-const useFetch = (url) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function useFetch(url, initial = null) {
+  const [data, setData] = useState(initial)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetch(url)
-      .then((res) => res.json())
-      .then((json) => { setData(json); setLoading(false); })
-      .catch((err) => { setError(err); setLoading(false); });
-  }, [url]);
+    let cancelled = false
+    setLoading(true)
+    api.get(url)
+      .then(res => { if (!cancelled) setData(res.data) })
+      .catch(err => { if (!cancelled) setError(err) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [url])
 
-  return { data, loading, error };
-};
-
-export default useFetch;
+  return { data, loading, error }
+}

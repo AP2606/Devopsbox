@@ -16,10 +16,10 @@ spec:
     spec:
       containers:
       - name: devops-frontend
-        image: devopsfrontend:midsemv2 # Replace with your registry if you push it (e.g., dockerhub/ghcr)
+        image: frontend:midsem  
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 3000
+        - containerPort: 80
 ---
 apiVersion: v1
 kind: Service
@@ -31,5 +31,6 @@ spec:
   ports:
   - protocol: TCP
     port: 80        # Service port
-    targetPort: 3000 # Container port
-  type: NodePort    # Change to LoadBalancer if using cloud (EKS/GKE/AKS)
+    targetPort: 80  # Container port
+  type: NodePort
+

@@ -1,17 +1,14 @@
-import React from "react";
-import Sidebar from "./Sidebar";
-import Topbar from "./Topbar";
+import Sidebar from './Sidebar.jsx'
+import Topbar from './Topbar.jsx'
 
-const Layout = ({ children }) => {
+export default function Layout({ children }) {
   return (
-    <div className="layout">
+    <div className='app-layout'>
       <Sidebar />
-      <div className="content">
+      <div className='main-content'>
         <Topbar />
-        <main>{children}</main>
+        <main className='page-content'>{children}</main>
       </div>
     </div>
-  );
-};
-
-export default Layout;
+  )
+}
