@@ -6,7 +6,7 @@ import { fetchChallenges } from "../services/api.js";
 
 export default function Challenges() {
   const [challenges, setChallenges] = useState([]);   
-  with empty array
+  //with empty array
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 

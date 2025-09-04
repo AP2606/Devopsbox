@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: devops-backend
-        image: backend:midsem  
+        image: backend:latest  
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5000
