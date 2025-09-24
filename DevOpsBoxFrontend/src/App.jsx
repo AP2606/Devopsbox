@@ -15,7 +15,7 @@ function App() {
       <div className="flex-1 flex flex-col">
         {/* Topbar */}
         <header className="bg-gray-100 shadow px-6 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold">DevOpsBox</h1>
+          <h1 className="text-xl font-bold">DevOps Practice SandBox 🚀</h1>
           <span className="text-gray-600">👤 Welcome, User</span>
         </header>
 
