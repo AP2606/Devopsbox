@@ -1,35 +1,67 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
+from flask import Flask, jsonify, request
+import os
+import psycopg2
+import subprocess
 
 app = Flask(__name__)
-CORS(app)
 
-# Dummy challenge data for midsem 
-CHALLENGES = [
-    {"id": 1, "title": "Fix Broken CI Pipeline", "category": "CI/CD", "difficulty": "Medium", "status": "Yet to Start"},
-    {"id": 2, "title": "Debug Dockerfile", "category": "Docker", "difficulty": "Easy", "status": "Yet to Start"},
-    {"id": 3, "title": "Kubernetes Misconfigured Deployment", "category": "Kubernetes", "difficulty": "Hard", "status": "Yet to Start"}
-]
+DB_URI = os.environ.get('DB_URI', 'postgresql://postgres:password@postgres:5432/devopsbox')
 
-@app.get("/")
-def root():
-    return jsonify({"service": "DevOpsBox Backend", "status": "ok"})
+def get_db_connection():
+    conn = psycopg2.connect(DB_URI)
+    return conn
 
-@app.get("/api/health")
+@app.route('/health')
 def health():
-    return jsonify({"status": "healthy"})
+    try:
+        conn = get_db_connection()
+        conn.close()
+        return jsonify({"status": "OK"}), 200
+    except Exception as e:
+        return jsonify({"status": "ERROR", "details": str(e)}), 500
 
-@app.get("/api/challenges")
+@app.route('/challenges')
 def get_challenges():
-    return jsonify(CHALLENGES)
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, status FROM challenges;")
+        rows = cur.fetchall()
+        challenges = [{"id": r[0], "name": r[1], "status": r[2]} for r in rows]
+        cur.close()
+        conn.close()
+        return jsonify({"challenges": challenges})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-@app.get("/api/challenges/<int:challenge_id>")
-def get_challenge_by_id(challenge_id):
-    challenge = next((ch for ch in CHALLENGES if ch["id"] == challenge_id), None)
-    if challenge:
-        return jsonify(challenge)
-    return jsonify({"error": "Challenge not found"}), 404
+@app.route('/challenges/<int:challenge_id>')
+def challenge_details(challenge_id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, status FROM challenges WHERE id=%s;", (challenge_id,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        if row:
+            return jsonify({"id": row[0], "name": row[1], "status": row[2]})
+        else:
+            return jsonify({"error": "Challenge not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+@app.route('/start/<int:challenge_id>', methods=['POST'])
+def start_challenge(challenge_id):
+    try:
+        # Run the corresponding sandbox setup script
+        result = subprocess.run(
+            ["bash", f"sandbox/challenge_{challenge_id}/setup.sh"],
+            capture_output=True,
+            text=True
+        )
+        return jsonify({"message": result.stdout})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
