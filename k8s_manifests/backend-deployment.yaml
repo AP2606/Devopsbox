@@ -16,10 +16,13 @@ spec:
     spec:
       containers:
       - name: devops-backend
-        image: backend:latest  
+        image: backend:latest   # Flask backend
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5000
+        env:
+        - name: DB_URI
+          value: postgresql://postgres:postgrespw@postgres-service:5432/devopsbox
 ---
 apiVersion: v1
 kind: Service
@@ -33,4 +36,3 @@ spec:
     port: 5000       # Service port
     targetPort: 5000 # Container port
   type: ClusterIP
-

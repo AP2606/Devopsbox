@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: devops-frontend
-        image: frontend:latest  
+        image: frontend:latest   # React + Vite frontend
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
@@ -33,4 +33,3 @@ spec:
     port: 80        # Service port
     targetPort: 80  # Container port
   type: NodePort
-
