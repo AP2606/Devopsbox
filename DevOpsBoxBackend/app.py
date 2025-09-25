@@ -5,7 +5,8 @@ import subprocess
 
 app = Flask(__name__)
 
-DB_URI = os.environ.get('DB_URI', 'postgresql://postgres:password@postgres:5432/devopsbox')
+DB_URI = os.environ.get('DB_URI', 'postgresql://postgres:postgrespw@postgres-service:5432/devopsbox
+')
 
 def get_db_connection():
     conn = psycopg2.connect(DB_URI)
