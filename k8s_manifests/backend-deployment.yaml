@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: devops-backend
-        image: backend:latest   # Flask backend
-        imagePullPolicy: IfNotPresent
+        image: devops-backend:latest   # Flask backend
+        imagePullPolicy: Never
         ports:
         - containerPort: 5000
         env:

@@ -11,17 +11,17 @@ export default function Challenges() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchChallenges()
-      .then(data => {
-        if (Array.isArray(data)) {
-          setChallenges(data);
-        } else {
-          setError("Invalid response format");
-        }
-      })
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+  fetchChallenges()
+    .then(data => {
+      if (Array.isArray(data.challenges)) {
+        setChallenges(data.challenges); // ✅ unwrap challenges array
+      } else {
+        setError("Invalid response format");
+      }
+    })
+    .catch(err => setError(err.message))
+    .finally(() => setLoading(false));
+}, []);
 
   if (loading) return <p>Loading challenges...</p>;
   if (error) return <p className="text-red-600">Error: {error}</p>;
