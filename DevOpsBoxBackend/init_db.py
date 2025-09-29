@@ -35,27 +35,27 @@ def init_db():
             
             if count == 0:
                 print("Inserting initial challenge data...")
-                # Insert actual final project challenges
+                # Insert specific, detailed challenges for the DevOpsBox project
                 challenges = [
                     (
                         "Fix Broken CI Pipeline",
                         "CI/CD",
                         "Medium",
-                        "The CI pipeline is failing due to misconfigured steps. Identify the issue and fix the pipeline to pass all stages.",
+                        "**Scenario:** The CI pipeline is failing on the 'build' stage due to an incorrect variable being referenced in the configuration file, preventing the creation of the final Docker image tag. **Goal:** Identify the faulty variable reference in the CI configuration and correct the path so the build completes successfully.",
                         "pending"
                     ),
                     (
-                        "Debug Dockerfile",
+                        "Optimize Inefficient Dockerfile",
                         "Docker",
                         "Easy",
-                        "The Dockerfile used to build the application image has errors. Identify and correct the Dockerfile so the image builds successfully.",
+                        "**Scenario:** The current application image is over 1GB, increasing deployment time and storage costs. This is often due to installing unnecessary dependencies in the final image layer. **Goal:** Refactor the existing Dockerfile using multi-stage builds and best practices (like placing 'RUN' commands efficiently) to reduce the final image size below 100MB.",
                         "pending"
                     ),
                     (
-                        "Kubernetes Misconfigured Deployment",
+                        "Resolve CrashLoopBackOff",
                         "Kubernetes",
                         "Hard",
-                        "A Kubernetes deployment is not functioning due to misconfiguration. Debug and fix the deployment so the pods start correctly and are accessible.",
+                        "**Scenario:** A critical Kubernetes service deployment is stuck in a `CrashLoopBackOff` state. Initial checks show the image is correct, but the pod never stays up. **Goal:** Debug the failing pod using `kubectl logs` and `kubectl describe`. The root cause is an incorrect command defined in the deployment YAML's container `args`. Correct the YAML and reapply the deployment to bring the service online.",
                         "pending"
                     )
                 ]
@@ -88,4 +88,3 @@ def init_db():
 
 if __name__ == '__main__':
     init_db()
-
