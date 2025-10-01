@@ -14,7 +14,7 @@ kubectl create configmap ${CM_NAME} \
   --dry-run=client -o yaml | kubectl apply -f -
 
 mkdir -p /workspace/challenge_1
-cp /app/sandbox/challenge_1/${BROKEN_FILE} /workspace/challenge_1/.gitlab-ci.yml
+cp /app/sandbox/challenge_1/${BROKEN_FILE} /workspace/challenge_1/broken-ci.yml
 
 echo "✅ Environment configured. ConfigMap '${CM_NAME}' created."
 

@@ -101,4 +101,35 @@ export async function runCommand(command) {
   }
   return response.json();
 }
+export async function readFile(path) {
+  try {
+    const res = await fetch(`/api/read-file?path=${encodeURIComponent(path)}`);
+    // Note: The backend returns 404/400 for errors, but the response structure is always JSON.
+    const data = await res.json();
+    return data; 
+  } catch (error) {
+    // Handle network errors
+    return { error: `Network error: ${error.message}` };
+  }
+}
+export async function editFile(path, content) {
+  try {
+    const res = await fetch("/api/edit-file", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ path, content }),
+    });
+    // The backend handles the status codes, we just return the JSON result
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    // Handle network errors
+    return { error: `Network error: ${error.message}` };
+  }
+}
+export async function resetChallenge(id) {
+  const response = await fetch(`/api/reset/${id}`, { method: "POST" });
+  if (!response.ok) throw new Error("Failed to reset challenge");
+  return response.json();
+}
 

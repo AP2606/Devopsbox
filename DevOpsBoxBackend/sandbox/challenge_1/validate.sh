@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-file="/workspace/challenge_1/.gitlab-ci.yml"
+file="/workspace/challenge_1/broken-ci.yml"
 if grep -q "DOCKER_IMAGE_TAG" "$file"; then
   echo "✅ Challenge solved! Correct variable reference found."
 else

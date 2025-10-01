@@ -203,6 +203,8 @@ def validate_challenge(challenge_id):
     """
     Validates the challenge by running its sandbox/validate.sh script.
     """
+    conn = None # Initialize conn outside the try block
+    cur = None
     try:
         script_path = f"sandbox/challenge_{challenge_id}/validate.sh"
         if not os.path.exists(script_path):
@@ -215,6 +217,15 @@ def validate_challenge(challenge_id):
         )
 
         if result.returncode == 0:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            
+            # 1. Update the status to 'completed' in the challenges table
+            update_sql = "UPDATE challenges SET status = 'completed' WHERE id = %s;"
+            cur.execute(update_sql, (challenge_id,))
+            
+            # 2. COMMIT the transaction to make the change permanent
+            conn.commit()
             return jsonify({
                 "status": "success",
                 "message": result.stdout.strip()
@@ -228,7 +239,10 @@ def validate_challenge(challenge_id):
 
     except Exception as e:
         return jsonify({"error": f"Validation failed: {str(e)}"}), 500
-        
+    finally:
+        # Ensure database cursor and connection are closed
+        if cur is not None: cur.close()
+        if conn is not None: conn.close()    
 @app.route('/api/run-command', methods=['POST'])
 def run_command():
     """
@@ -261,6 +275,123 @@ def run_command():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/read-file', methods=['GET'])
+def read_file():
+    """
+    Reads a file inside /workspace and returns its contents.
+    Query param: ?path=/workspace/challenge_1/broken-ci.yml
+    """
+    file_path = request.args.get("path")
+    if not file_path:
+        return jsonify({"error": "Path required"}), 400
+
+    # Security check: only allow access inside /workspace
+    if not file_path.startswith("/workspace/"):
+        return jsonify({"error": "Access outside /workspace not allowed"}), 403
+
+    # Check for file existence
+    if not os.path.exists(file_path):
+        return jsonify({"error": f"File not found: {file_path}"}), 404
+
+    try:
+        with open(file_path, "r") as f:
+            content = f.read()
+        return jsonify({"path": file_path, "content": content})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/edit-file', methods=['POST'])
+def edit_file():
+    """
+    Allows editing of a file in the /workspace directory.
+    Request JSON:
+      {
+        "path": "/workspace/challenge_1/broken-ci.yml",
+        "content": "<new file contents>"
+      }
+    """
+    data = request.get_json()
+    if not data or "path" not in data or "content" not in data:
+        return jsonify({"error": "Both 'path' and 'content' are required."}), 400
+
+    file_path = data["path"]
+    content = data["content"]
+
+    # Security check: only allow edits inside /workspace
+    if not file_path.startswith("/workspace/"):
+        return jsonify({"error": "Editing outside /workspace is not allowed."}), 403
+
+    try:
+        # Ensure the directory exists before trying to write the file
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "w") as f:
+            f.write(content)
+
+        return jsonify({
+            "status": "success",
+            "message": f"File '{file_path}' updated successfully."
+        }), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to edit file: {str(e)}"}), 500
+        
+@app.route('/api/reset/<int:challenge_id>', methods=['POST'])
+@app.route('/reset/<int:challenge_id>', methods=['POST'])
+def reset_challenge(challenge_id):
+    """
+    Resets the challenge by re-running setup.sh and marking status as pending.
+    Useful for retrying after failed/incorrect attempts.
+    """
+    conn = None
+    cur = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Check if challenge exists
+        cur.execute("SELECT title FROM challenges WHERE id=%s;", (challenge_id,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify({"error": "Challenge not found"}), 404
+
+        challenge_title = row[0]
+        script_path = f"sandbox/challenge_{challenge_id}/setup.sh"
+
+        if not os.path.exists(script_path):
+            return jsonify({"error": f"Setup script not found for challenge {challenge_id}"}), 404
+
+        # Re-run setup.sh
+        result = subprocess.run(
+            ["bash", script_path],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            # Reset status in DB
+            cur.execute("UPDATE challenges SET status = 'pending' WHERE id = %s;", (challenge_id,))
+            conn.commit()
+
+            return jsonify({
+                "message": f"Challenge '{challenge_title}' reset successfully. Back to pending.",
+                "status": "pending",
+                "output": result.stdout
+            }), 200
+        else:
+            return jsonify({
+                "error": "Challenge reset failed.",
+                "stderr": result.stderr,
+                "stdout": result.stdout
+            }), 500
+
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
+
 
     
 if __name__ == '__main__':

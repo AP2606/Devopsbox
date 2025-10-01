@@ -1,7 +1,138 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { fetchChallengeById, startChallenge, validateChallenge, runCommand } from "/src/services/api.js";
+import { Edit3 } from 'lucide-react';
+import { fetchChallengeById, startChallenge, validateChallenge, runCommand, resetChallenge } from "/src/services/api.js";
 
+
+  const FileEditor = ({ challengeId }) => {
+  const [filePath, setFilePath] = useState("");
+  const [fileContent, setFileContent] = useState("");
+  const [editStatus, setEditStatus] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Map challenge ID to its default starting file path
+  const defaultFiles = {
+    1: "/workspace/challenge_1/broken-ci.yml",
+    2: "/workspace/challenge_2/Dockerfile",
+    3: "/workspace/challenge_3/deployment.yaml"
+  };
+
+  const currentDefaultPath = defaultFiles[challengeId] || `/workspace/challenge_${challengeId}/`;
+
+  const fetchFileContent = async (path) => {
+    setIsLoading(true);
+    setEditStatus(null);
+    try {
+      // NOTE: Using direct fetch since readFile is not yet exported in src/services/api.js
+      const res = await fetch(`/api/read-file?path=${encodeURIComponent(path)}`);
+      const data = await res.json();
+      if (data.content !== undefined) {
+        setFileContent(data.content);
+        setEditStatus(null);
+      } else {
+        setFileContent(data.error || "# Error loading file. Path may be incorrect or challenge not started.");
+        setEditStatus(`Error: ${data.error || 'Could not load file.'}`);
+      }
+    } catch (error) {
+      setFileContent("# Network error loading file content.");
+      setEditStatus(`Network Error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 1. Initialize path and fetch content when component mounts
+  useEffect(() => {
+    setFilePath(currentDefaultPath);
+    fetchFileContent(currentDefaultPath);
+  }, [challengeId]);
+
+  // 2. Handler to manually load file if user changes path
+  const handleLoadFile = () => {
+    fetchFileContent(filePath);
+  };
+
+  // 3. Save function (calls the new /api/edit-file endpoint)
+  const handleSaveFile = async () => {
+    setIsLoading(true);
+    setEditStatus(null);
+    try {
+      // NOTE: Using direct fetch since editFile is not yet exported in src/services/api.js
+      const res = await fetch("/api/edit-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: filePath, content: fileContent }),
+      });
+      const data = await res.json();
+      const newStatus = data.message || data.error;
+      setEditStatus(newStatus);
+    } catch (error) {
+      setEditStatus(`Network Error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const statusColor = editStatus ? (editStatus.startsWith('Error') || editStatus.startsWith('Failed') ? 'text-red-500' : 'text-green-600') : 'text-gray-500';
+  const buttonClassName = "px-4 py-2 rounded-xl text-white font-bold text-lg transition duration-300 shadow-lg hover:shadow-xl disabled:opacity-50";
+
+
+  return (
+    <div className="mt-8 p-6 bg-gray-50 rounded-xl shadow-inner border border-gray-200">
+      <h3 className="text-2xl font-bold mb-4 text-gray-800 flex items-center">
+        <Edit3 className="w-5 h-5 mr-2 text-indigo-600" />
+        Sandbox File Editor
+      </h3>
+
+      {/* File Path Input */}
+      <div className="flex space-x-2 mb-3">
+        <input
+          type="text"
+          value={filePath}
+          onChange={(e) => setFilePath(e.target.value)}
+          className="flex-grow p-2 border border-gray-300 rounded-lg font-mono text-sm bg-white focus:border-indigo-500 focus:ring-indigo-500"
+          placeholder="/workspace/challenge_id/file_name.ext"
+          aria-label="File path"
+        />
+        <button
+            onClick={handleLoadFile}
+            disabled={isLoading}
+            className="flex-shrink-0 bg-gray-300 hover:bg-gray-400 text-gray-800 text-sm font-medium px-4 py-2 rounded-lg transition duration-150 disabled:opacity-50"
+          >
+            {isLoading ? 'Loading...' : 'Load File'}
+          </button>
+      </div>
+
+      {/* Textarea Editor */}
+      <textarea
+        value={fileContent}
+        onChange={(e) => setFileContent(e.target.value)}
+        rows={12}
+        className="w-full p-4 h-64 border-2 border-gray-300 rounded-xl font-mono text-sm bg-gray-900 text-white shadow-inner focus:border-indigo-500 focus:outline-none resize-y"
+        placeholder={isLoading ? "Loading file content..." : "Start typing your file content here..."}
+        disabled={isLoading}
+        aria-label="File content editor"
+      />
+
+      {/* Save Button and Status */}
+      <div className="flex justify-between items-center mt-4">
+        <button
+          onClick={handleSaveFile}
+          disabled={isLoading}
+          className={`${buttonClassName} bg-indigo-600 hover:bg-indigo-700`}
+        >
+          {isLoading ? 'Saving...' : '💾 Save Changes'}
+        </button>
+
+        {editStatus && (
+          <p className={`text-sm font-semibold p-2 rounded ${statusColor} transition-opacity duration-300`}>
+            {editStatus}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 export default function ChallengeDetail() {
   const { id } = useParams();
   
@@ -13,6 +144,7 @@ export default function ChallengeDetail() {
   const [validationStatus, setValidationStatus] = useState({ state: 'idle', message: '' });
   const [command, setCommand] = useState("");
   const [commandOutput, setCommandOutput] = useState("");
+  const [resetStatus, setResetStatus] = useState({ state: 'idle', message: '' });
 
   // Fetch challenge details when the component mounts or ID changes
   useEffect(() => {
@@ -60,6 +192,10 @@ const handleValidateChallenge = async () => {
   try {
     const result = await validateChallenge(id);
     setValidationStatus({ state: 'success', message: result.message || 'Validation passed!' });
+    setChallenge(prevChallenge => ({
+      ...prevChallenge,
+      status: 'completed' // Force the status update in the UI
+    }));
   } catch (err) {
     setValidationStatus({ state: 'error', message: err.message || 'Validation failed.' });
   }
@@ -76,6 +212,16 @@ const handleValidateChallenge = async () => {
       setCommandOutput(`Error: ${err.message}`);
     }
   };
+const handleResetChallenge = async () => {
+  setResetStatus({ state: 'loading', message: 'Resetting environment...' });
+  try {
+    const result = await resetChallenge(id);
+    setResetStatus({ state: 'success', message: result.message || 'Challenge reset.' });
+    setChallenge(prev => ({ ...prev, status: "pending" })); // update local state
+  } catch (err) {
+    setResetStatus({ state: 'error', message: err.message || 'Reset failed.' });
+  }
+};
 
   // --- Render Logic ---
   if (isLoading) return <p className="text-center text-xl p-8 text-gray-600">Loading challenge details...</p>;
@@ -162,6 +308,33 @@ const handleValidateChallenge = async () => {
     </div>
     )}
         </div>
+<button
+  onClick={handleResetChallenge}
+  disabled={resetStatus.state === 'loading'}
+  className={`
+    w-full sm:w-auto px-10 py-3 rounded-xl text-white font-bold text-lg transition duration-300 shadow-lg hover:shadow-xl
+    ${resetStatus.state === 'loading'
+      ? 'bg-gray-400 cursor-not-allowed'
+      : 'bg-red-600 hover:bg-red-700 transform hover:scale-[1.01]'
+    }
+  `}
+>
+  {resetStatus.state === 'loading' ? 'Resetting...' : 'Reset Challenge'}
+</button>
+
+{resetStatus.state !== 'idle' && (
+  <div className={`p-4 rounded-lg font-medium text-base ${
+    resetStatus.state === 'success'
+      ? 'bg-green-100 text-green-700'
+      : resetStatus.state === 'error'
+      ? 'bg-red-100 text-red-700'
+      : 'bg-blue-100 text-blue-700'
+  }`}>
+    <p>{resetStatus.message}</p>
+  </div>
+)}
+
+<FileEditor challengeId={id} />
 {/* Sandbox Terminal */}
         <div className="mt-8 p-4 border rounded-lg bg-gray-50">
           <h3 className="font-bold mb-2">💻 Sandbox Terminal</h3>
