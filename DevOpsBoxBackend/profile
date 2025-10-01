@@ -1,0 +1,30 @@
+# This file is sourced by the bash shell upon startup inside the sandbox terminal.
+
+# Define a simple function for non-interactive multi-line file editing.
+# This prevents the "Too many errors from stdin" issue caused by nano/vim.
+#
+# Usage: edit_file /path/to/file.txt
+#
+# It opens a block for the user to type/paste new content.
+edit_file() {
+    if [ -z "$1" ]; then
+        echo "Usage: edit_file <filename>"
+        return 1
+    fi
+    echo "--- EDITING: $1 ---"
+    echo "Paste or type your new content below. Press ENTER, then Ctrl+D to save and quit."
+    /bin/cat > "$1"
+    echo "File $1 successfully updated."
+}
+
+# Use the 'ex' editor as a non-interactive fall-back for more complex edits if available
+alias safe_edit='ex'
+
+# Alias for listing files including hidden ones (useful for finding swap files)
+alias la='ls -a'
+
+# Friendly reminder on how to use the new function
+echo "--------------------------------------------------------"
+echo "TIP: Use the 'edit_file <filename>' command for reliable editing."
+echo "     This avoids terminal errors from interactive editors like nano/vim."
+echo "--------------------------------------------------------"

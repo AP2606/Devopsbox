@@ -1,0 +1,9 @@
+stages:
+
+build
+
+build-job:
+stage: build
+script:
+- echo "Building Docker image..."
+- docker build -t myapp:$DOCKER_IMAE_TAG   # <-- INTENTIONALLY WRONG VARIABLE

@@ -151,7 +151,7 @@ def start_challenge(challenge_id):
                 "message": f"Challenge '{challenge_title}' environment is already active.",
                 "status": "active"
             }), 200
-        
+            
         # 3. Execute the setup script
         script_path = f"sandbox/challenge_{challenge_id}/setup.sh"
         print(f"Executing script: {script_path}")
@@ -197,6 +197,72 @@ def start_challenge(challenge_id):
         if cur: cur.close()
         if conn: conn.close()
 
+@app.route('/api/validate/<int:challenge_id>', methods=['POST'])
+@app.route('/validate/<int:challenge_id>', methods=['POST'])
+def validate_challenge(challenge_id):
+    """
+    Validates the challenge by running its sandbox/validate.sh script.
+    """
+    try:
+        script_path = f"sandbox/challenge_{challenge_id}/validate.sh"
+        if not os.path.exists(script_path):
+            return jsonify({"error": f"Validation script not found for challenge {challenge_id}"}), 404
+
+        result = subprocess.run(
+            ["bash", script_path],
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            return jsonify({
+                "status": "success",
+                "message": result.stdout.strip()
+            }), 200
+        else:
+            return jsonify({
+                "status": "failed",
+                "error": result.stderr.strip(),
+                "message": result.stdout.strip()
+            }), 400
+
+    except Exception as e:
+        return jsonify({"error": f"Validation failed: {str(e)}"}), 500
+        
+@app.route('/api/run-command', methods=['POST'])
+def run_command():
+    """
+    Executes a safe command inside the workspace.
+    Request body: {"command": "ls /workspace/challenges/1"}
+    """
+    data = request.get_json()
+    if not data or "command" not in data:
+        return jsonify({"error": "Command not provided"}), 400
+
+    command = data["command"]
+
+    # (Optional) Safety filter: prevent dangerous commands
+    forbidden = ["rm", "shutdown", "reboot"]
+    if any(bad in command for bad in forbidden):
+        return jsonify({"error": "Forbidden command"}), 403
+    full_command = f". /etc/profile.d/devopsbox_profile.sh && {command}"
+    try:
+        result = subprocess.run(
+            full_command, 
+            shell=True, 
+            capture_output=True, 
+            text=True, 
+            cwd="/app" # FIXED: Changed from /workspace to /app
+        )
+        return jsonify({
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "exit_code": result.returncode
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
 

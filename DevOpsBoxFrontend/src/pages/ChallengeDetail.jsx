@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { fetchChallengeById, startChallenge } from "/src/services/api.js"; // **Final Path attempt: Absolute from container root**
+import { fetchChallengeById, startChallenge, validateChallenge, runCommand } from "/src/services/api.js";
 
 export default function ChallengeDetail() {
   const { id } = useParams();
@@ -10,6 +10,9 @@ export default function ChallengeDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [startStatus, setStartStatus] = useState({ state: 'idle', message: '' }); // State for challenge start process
+  const [validationStatus, setValidationStatus] = useState({ state: 'idle', message: '' });
+  const [command, setCommand] = useState("");
+  const [commandOutput, setCommandOutput] = useState("");
 
   // Fetch challenge details when the component mounts or ID changes
   useEffect(() => {
@@ -50,6 +53,27 @@ export default function ChallengeDetail() {
         state: 'error', 
         message: err.message || 'Failed to start challenge environment. Please check the backend service.' 
       });
+    }
+  };
+const handleValidateChallenge = async () => {
+  setValidationStatus({ state: 'loading', message: 'Validating solution...' });
+  try {
+    const result = await validateChallenge(id);
+    setValidationStatus({ state: 'success', message: result.message || 'Validation passed!' });
+  } catch (err) {
+    setValidationStatus({ state: 'error', message: err.message || 'Validation failed.' });
+  }
+};
+  const handleRunCommand = async () => {
+    if (!command.trim()) return;
+    setCommandOutput("Running...");
+    try {
+      const result = await runCommand(command);
+      setCommandOutput(
+        `Exit Code: ${result.exit_code}\n\nSTDOUT:\n${result.stdout}\n\nSTDERR:\n${result.stderr}`
+      );
+    } catch (err) {
+      setCommandOutput(`Error: ${err.message}`);
     }
   };
 
@@ -111,6 +135,55 @@ export default function ChallengeDetail() {
             <p>{startStatus.message}</p>
           </div>
         )}
+        <div className="flex flex-col gap-4 mt-6">
+  <button
+    onClick={handleValidateChallenge}
+    disabled={validationStatus.state === 'loading'}
+    className={`
+      w-full sm:w-auto px-10 py-3 rounded-xl text-white font-bold text-lg transition duration-300 shadow-lg hover:shadow-xl
+      ${validationStatus.state === 'loading'
+        ? 'bg-gray-400 cursor-not-allowed'
+        : 'bg-green-600 hover:bg-green-700 transform hover:scale-[1.01]'
+      }
+    `}
+  >
+    {validationStatus.state === 'loading' ? 'Validating...' : 'Validate Challenge'}
+  </button>
+
+  {validationStatus.state !== 'idle' && (
+    <div className={`p-4 rounded-lg font-medium text-base ${
+      validationStatus.state === 'success'
+        ? 'bg-green-100 text-green-700'
+        : validationStatus.state === 'error'
+        ? 'bg-red-100 text-red-700'
+        : 'bg-blue-100 text-blue-700'
+    }`}>
+      <p>{validationStatus.message}</p>
+    </div>
+    )}
+        </div>
+{/* Sandbox Terminal */}
+        <div className="mt-8 p-4 border rounded-lg bg-gray-50">
+          <h3 className="font-bold mb-2">💻 Sandbox Terminal</h3>
+          <input
+            type="text"
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            placeholder="Enter command (e.g., ls -l /workspace/challenge_1)"
+            className="w-full px-3 py-2 border rounded mb-2"
+          />
+          <button
+            onClick={handleRunCommand}
+            className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+          >
+            Run
+          </button>
+          {commandOutput && (
+            <pre className="mt-4 bg-black text-green-400 p-3 rounded overflow-x-auto whitespace-pre-wrap">
+              {commandOutput}
+            </pre>
+          )}
+        </div>
       </div>
     </div>
   );

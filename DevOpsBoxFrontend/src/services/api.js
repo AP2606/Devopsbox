@@ -75,4 +75,30 @@ export async function fetchStats() {
     }
     return response.json();
 }
+export async function validateChallenge(id) {
+  const response = await fetch(`/api/validate/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Validation failed: ${response.status} ${errorText}`);
+  }
+
+  return response.json();
+}
+export async function runCommand(command) {
+  const response = await fetch("/api/run-command", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ command }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Command failed: ${response.status} ${text}`);
+  }
+  return response.json();
+}
 

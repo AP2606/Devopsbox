@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+name: broken-nginx
+namespace: challenge-3
+spec:
+replicas: 1
+selector:
+matchLabels:
+app: nginx-crasher
+template:
+metadata:
+labels:
+app: nginx-crasher
+spec:
+containers:
+- name: broken-container
+image: nginx:latest
+# INTENTIONAL ERROR: Nginx does not accept arguments like this,
+# causing it to fail immediately and enter CrashLoopBackOff.
+args: ["--this-argument-does-not-exist"]
+ports:
+- containerPort: 80
