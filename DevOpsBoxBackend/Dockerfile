@@ -6,6 +6,7 @@ RUN apt-get update && \
         nano \
         vim \
         kubectl \
+        docker.io \
     && rm -rf /var/lib/apt/lists/*
     
 ARG DB_URI
