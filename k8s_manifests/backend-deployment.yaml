@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: devops-backend
-        image: devops-backend:latest   # Flask backend
-        imagePullPolicy: Never
+        image: 931936006344.dkr.ecr.ap-south-1.amazonaws.com/devopsbox-backend:latest   # Flask backend
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
         env:

@@ -8,8 +8,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: devopsbox.local
-      http:
+    - http:
         paths:
           # Backend API — keep full /api path
           - path: /api

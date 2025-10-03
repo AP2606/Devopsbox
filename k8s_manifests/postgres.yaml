@@ -39,6 +39,10 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/postgresql/data
           name: postgres-storage
+        resources:
+          requests:
+            cpu: "100m"   # 10% of a CPU core
+            memory: "128Mi" # 128 Megabytes of memory
       volumes:
       - name: postgres-storage
         emptyDir: {}

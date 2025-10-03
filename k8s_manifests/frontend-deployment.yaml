@@ -5,7 +5,7 @@ metadata:
   labels:
     app: devops-frontend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: devops-frontend
@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: devops-frontend
-        image: devops-frontend:latest   # React + Vite frontend
-        imagePullPolicy: IfNotPresent
+        image: 931936006344.dkr.ecr.ap-south-1.amazonaws.com/devopsbox-frontend:latest   # React + Vite frontend
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
 ---
