@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: devops-frontend
-        image: 931936006344.dkr.ecr.ap-south-1.amazonaws.com/devopsbox-frontend:latest   # React + Vite frontend
-        imagePullPolicy: Always
+        image: frontend:latest   
+        imagePullPolicy: Never
         ports:
         - containerPort: 80
 ---
@@ -30,6 +30,6 @@ spec:
     app: devops-frontend
   ports:
   - protocol: TCP
-    port: 80        # Service port
-    targetPort: 80  # Container port
+    port: 80        
+    targetPort: 80  
   type: NodePort

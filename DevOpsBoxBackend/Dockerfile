@@ -1,5 +1,4 @@
 FROM python:3.11-slim
-# Install system dependencies (curl, nano, vim, kubectl)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \

@@ -121,7 +121,7 @@ def challenge_details(challenge_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ROUTE FIX: Supporting both route styles for starting a challenge
+
 @app.route('/api/start/<int:challenge_id>', methods=['POST'])
 @app.route('/start/<int:challenge_id>', methods=['POST'])
 def start_challenge(challenge_id):
@@ -129,13 +129,13 @@ def start_challenge(challenge_id):
     Starts the challenge setup script and updates the database status.
     This is the core logic for provisioning the environment.
     """
-    conn = None # Initialize conn outside the try block
+    conn = None 
     cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # 1. Check if challenge exists and get current status
+        
         cur.execute("SELECT status, title FROM challenges WHERE id=%s;", (challenge_id,))
         row = cur.fetchone()
         
@@ -145,7 +145,7 @@ def start_challenge(challenge_id):
         current_status = row[0]
         challenge_title = row[1]
 
-        # 2. Prevent re-launching an active environment (Idempotency)
+        
         if current_status == "active":
             return jsonify({
                 "message": f"Challenge '{challenge_title}' environment is already active.",
@@ -162,10 +162,9 @@ def start_challenge(challenge_id):
             text=True
         )
 
-        # 4. Check exit code and update DB status accordingly
+        
         if result.returncode == 0:
             new_status = "active"
-            # Update status in the database
             cur.execute("UPDATE challenges SET status = %s WHERE id = %s;", (new_status, challenge_id))
             conn.commit()
             
@@ -175,25 +174,21 @@ def start_challenge(challenge_id):
                 "output": result.stdout
             }), 200
         else:
-            # Script failed to execute successfully
+           
             new_status = "setup_failed"
-            # Update status to failed so the user knows they need to intervene
             cur.execute("UPDATE challenges SET status = %s WHERE id = %s;", (new_status, challenge_id))
             conn.commit()
             
-            # Return detailed error (stdout and stderr) for debugging
             return jsonify({
                 "error": "Challenge setup failed.",
                 "details": f"Script failed with exit code {result.returncode}",
                 "stdout": result.stdout,
                 "stderr": result.stderr
-            }), 500 # Use 500 for a server-side execution failure
+            }), 500 
 
     except Exception as e:
-        # Handle exceptions during database ops or other runtime errors
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
     finally:
-        # Ensure database cursor and connection are closed
         if cur: cur.close()
         if conn: conn.close()
 
@@ -203,7 +198,7 @@ def validate_challenge(challenge_id):
     """
     Validates the challenge by running its sandbox/validate.sh script.
     """
-    conn = None # Initialize conn outside the try block
+    conn = None 
     cur = None
     try:
         script_path = f"sandbox/challenge_{challenge_id}/validate.sh"
@@ -220,11 +215,9 @@ def validate_challenge(challenge_id):
             conn = get_db_connection()
             cur = conn.cursor()
             
-            # 1. Update the status to 'completed' in the challenges table
             update_sql = "UPDATE challenges SET status = 'completed' WHERE id = %s;"
             cur.execute(update_sql, (challenge_id,))
             
-            # 2. COMMIT the transaction to make the change permanent
             conn.commit()
             return jsonify({
                 "status": "success",
@@ -240,7 +233,7 @@ def validate_challenge(challenge_id):
     except Exception as e:
         return jsonify({"error": f"Validation failed: {str(e)}"}), 500
     finally:
-        # Ensure database cursor and connection are closed
+       
         if cur is not None: cur.close()
         if conn is not None: conn.close()    
 @app.route('/api/run-command', methods=['POST'])
@@ -255,7 +248,7 @@ def run_command():
 
     command = data["command"]
 
-    # (Optional) Safety filter: prevent dangerous commands
+    
     forbidden = ["rm", "shutdown", "reboot"]
     if any(bad in command for bad in forbidden):
         return jsonify({"error": "Forbidden command"}), 403
@@ -266,7 +259,7 @@ def run_command():
             shell=True, 
             capture_output=True, 
             text=True, 
-            cwd="/app" # FIXED: Changed from /workspace to /app
+            cwd="/app" 
         )
         return jsonify({
             "stdout": result.stdout,
@@ -286,11 +279,11 @@ def read_file():
     if not file_path:
         return jsonify({"error": "Path required"}), 400
 
-    # Security check: only allow access inside /workspace
+   
     if not file_path.startswith("/workspace/"):
         return jsonify({"error": "Access outside /workspace not allowed"}), 403
 
-    # Check for file existence
+    
     if not os.path.exists(file_path):
         return jsonify({"error": f"File not found: {file_path}"}), 404
 
@@ -319,12 +312,12 @@ def edit_file():
     file_path = data["path"]
     content = data["content"]
 
-    # Security check: only allow edits inside /workspace
+   
     if not file_path.startswith("/workspace/"):
         return jsonify({"error": "Editing outside /workspace is not allowed."}), 403
 
     try:
-        # Ensure the directory exists before trying to write the file
+        
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         with open(file_path, "w") as f:
             f.write(content)
@@ -339,29 +332,41 @@ def edit_file():
 @app.route('/api/reset/<int:challenge_id>', methods=['POST'])
 @app.route('/reset/<int:challenge_id>', methods=['POST'])
 def reset_challenge(challenge_id):
-    """
-    Resets the challenge by re-running setup.sh and marking status as pending.
-    Useful for retrying after failed/incorrect attempts.
-    """
+    
     conn = None
     cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Check if challenge exists
+        # --- Step 1: Verify challenge exists ---
         cur.execute("SELECT title FROM challenges WHERE id=%s;", (challenge_id,))
         row = cur.fetchone()
         if not row:
             return jsonify({"error": "Challenge not found"}), 404
 
         challenge_title = row[0]
+        challenge_name = f"challenge-{challenge_id}"
         script_path = f"sandbox/challenge_{challenge_id}/setup.sh"
+        workspace_dir = f"/workspace/challenge_{challenge_id}"
 
         if not os.path.exists(script_path):
             return jsonify({"error": f"Setup script not found for challenge {challenge_id}"}), 404
 
-        # Re-run setup.sh
+        # --- Step 2: Cleanup existing resources ---
+        cleanup_cmds = [
+            ["kubectl", "delete", "configmap", f"{challenge_name}-config", "--ignore-not-found=true"],
+            ["kubectl", "delete", "pod", "-l", f"app={challenge_name}", "--ignore-not-found=true"],
+            ["kubectl", "delete", "svc", "-l", f"app={challenge_name}", "--ignore-not-found=true"]
+        ]
+        for cmd in cleanup_cmds:
+            subprocess.run(cmd, capture_output=True, text=True)
+
+        # Remove workspace files if any exist
+        if os.path.exists(workspace_dir):
+            subprocess.run(["rm", "-rf", workspace_dir], check=False)
+
+        # --- Step 3: Re-run setup.sh ---
         result = subprocess.run(
             ["bash", script_path],
             capture_output=True,
@@ -369,18 +374,18 @@ def reset_challenge(challenge_id):
         )
 
         if result.returncode == 0:
-            # Reset status in DB
+            # --- Step 4: Update DB status ---
             cur.execute("UPDATE challenges SET status = 'pending' WHERE id = %s;", (challenge_id,))
             conn.commit()
 
             return jsonify({
-                "message": f"Challenge '{challenge_title}' reset successfully. Back to pending.",
+                "message": f"Challenge '{challenge_title}' reset successfully and environment re-initialized.",
                 "status": "pending",
                 "output": result.stdout
             }), 200
         else:
             return jsonify({
-                "error": "Challenge reset failed.",
+                "error": "Challenge reset failed during setup.",
                 "stderr": result.stderr,
                 "stdout": result.stdout
             }), 500
@@ -389,10 +394,10 @@ def reset_challenge(challenge_id):
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
     finally:
-        if cur: cur.close()
-        if conn: conn.close()
-
-
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
     
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

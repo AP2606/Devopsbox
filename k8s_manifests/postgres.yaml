@@ -41,8 +41,8 @@ spec:
           name: postgres-storage
         resources:
           requests:
-            cpu: "100m"   # 10% of a CPU core
-            memory: "128Mi" # 128 Megabytes of memory
+            cpu: "100m"   
+            memory: "128Mi" 
       volumes:
       - name: postgres-storage
         emptyDir: {}

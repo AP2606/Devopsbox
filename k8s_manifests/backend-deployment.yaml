@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
       - name: devops-backend
-        image: 931936006344.dkr.ecr.ap-south-1.amazonaws.com/devopsbox-backend:latest   # Flask backend
-        imagePullPolicy: Always
+        image: backend:latest   
+        imagePullPolicy: Never
         ports:
         - containerPort: 5000
         env:
@@ -33,6 +33,6 @@ spec:
     app: devops-backend
   ports:
   - protocol: TCP
-    port: 5000       # Service port
-    targetPort: 5000 # Container port
+    port: 5000       
+    targetPort: 5000 
   type: ClusterIP
