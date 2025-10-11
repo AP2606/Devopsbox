@@ -5,7 +5,7 @@ NAMESPACE="challenge-3"
 DEPLOYMENT_NAME="broken-nginx"
 
 echo "--- Starting Challenge 3 Validation ---"
-
+kubectl apply -f /workspace/challenge_3/deployment.yaml -n challenge-3
 if ! kubectl get deployment "$DEPLOYMENT_NAME" -n "$NAMESPACE" > /dev/null 2>&1; then
 echo "❌ Validation Failed: Deployment '$DEPLOYMENT_NAME' not found in namespace '$NAMESPACE'."
 exit 1
