@@ -7,14 +7,13 @@ import psycopg2
 import subprocess
 
 app = Flask(__name__)
-# Enable CORS for development
 CORS(app)
 
-# Corrected string literal for the fallback DB_URI
+
 DB_URI = os.environ.get('DB_URI', 'postgresql://postgres:postgrespw@postgres-service:5432/devopsbox')
 
 def get_db_connection():
-    # Added connection timeout for resilience
+    
     conn = psycopg2.connect(DB_URI, connect_timeout=5)
     return conn
     
@@ -25,17 +24,15 @@ def get_challenge_stats():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Query to count challenges grouped by their status
+        
         cur.execute("SELECT status, COUNT(*) FROM challenges GROUP BY status;")
         
         rows = cur.fetchall()
         cur.close()
         conn.close()
         
-        # Format results into a simple dictionary structure
         stats = {status: count for status, count in rows}
         
-        # Ensure all three categories are present, even if count is 0
         return jsonify({
             "completed": stats.get('completed', 0),
             "active": stats.get('active', 0),
@@ -44,7 +41,6 @@ def get_challenge_stats():
     except Exception as e:
         return jsonify({"error": f"Database query for stats failed: {str(e)}"}), 500
 
-# ROUTE FIX: Supporting both /api/health (if rewrite fails) and /health (if rewrite works)
 @app.route('/api/health')
 @app.route('/health')
 def health():
@@ -54,10 +50,8 @@ def health():
         conn.close()
         return jsonify({"status": "OK"}), 200
     except Exception as e:
-        # Note: If this fails, the DB connection failed (but postgres is up).
         return jsonify({"status": "ERROR", "details": f"DB connection failed: {str(e)}"}), 500
 
-# ROUTE FIX: Supporting both /api/challenges (if rewrite fails) and /challenges (if rewrite works)
 @app.route('/api/challenges')
 @app.route('/challenges')
 def get_challenges():
@@ -66,12 +60,10 @@ def get_challenges():
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Select all 6 columns to match the initialized 'challenges' table schema.
         cur.execute("SELECT id, title, category, difficulty, description, status FROM challenges;")
         
         rows = cur.fetchall()
         
-        # Map the results to a dictionary structure
         challenges = [{
             "id": r[0], 
             "title": r[1], 
@@ -83,13 +75,11 @@ def get_challenges():
         
         cur.close()
         conn.close()
-        # NOTE: Returning the list of challenges directly, not wrapped in a "challenges" key
-        # to simplify frontend consumption, matching the expected array response.
+      
         return jsonify(challenges) 
     except Exception as e:
         return jsonify({"error": f"Database query failed: {str(e)}"}), 500
 
-# ROUTE FIX: Supporting both route styles for challenge details
 @app.route('/api/challenges/<int:challenge_id>')
 @app.route('/challenges/<int:challenge_id>')
 def challenge_details(challenge_id):
@@ -98,7 +88,6 @@ def challenge_details(challenge_id):
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Select all columns for the challenge details view.
         cur.execute(
             "SELECT id, title, category, difficulty, description, status FROM challenges WHERE id=%s;", 
             (challenge_id,)
@@ -152,7 +141,6 @@ def start_challenge(challenge_id):
                 "status": "active"
             }), 200
             
-        # 3. Execute the setup script
         script_path = f"sandbox/challenge_{challenge_id}/setup.sh"
         print(f"Executing script: {script_path}")
         
@@ -339,7 +327,6 @@ def reset_challenge(challenge_id):
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # --- Step 1: Verify challenge exists ---
         cur.execute("SELECT title FROM challenges WHERE id=%s;", (challenge_id,))
         row = cur.fetchone()
         if not row:
@@ -353,7 +340,6 @@ def reset_challenge(challenge_id):
         if not os.path.exists(script_path):
             return jsonify({"error": f"Setup script not found for challenge {challenge_id}"}), 404
 
-        # --- Step 2: Cleanup existing resources ---
         cleanup_cmds = [
             ["kubectl", "delete", "configmap", f"{challenge_name}-config", "--ignore-not-found=true"],
             ["kubectl", "delete", "pod", "-l", f"app={challenge_name}", "--ignore-not-found=true"],
@@ -362,11 +348,10 @@ def reset_challenge(challenge_id):
         for cmd in cleanup_cmds:
             subprocess.run(cmd, capture_output=True, text=True)
 
-        # Remove workspace files if any exist
+       
         if os.path.exists(workspace_dir):
             subprocess.run(["rm", "-rf", workspace_dir], check=False)
 
-        # --- Step 3: Re-run setup.sh ---
         result = subprocess.run(
             ["bash", script_path],
             capture_output=True,
@@ -374,7 +359,7 @@ def reset_challenge(challenge_id):
         )
 
         if result.returncode == 0:
-            # --- Step 4: Update DB status ---
+            
             cur.execute("UPDATE challenges SET status = 'pending' WHERE id = %s;", (challenge_id,))
             conn.commit()
 

@@ -4,13 +4,12 @@ metadata:
   name: devopsbox-ingress
   namespace: default
   annotations:
-    nginx.ingress.kubernetes.io/use-regex: "false" # no regex needed
+    nginx.ingress.kubernetes.io/use-regex: "false" 
 spec:
   ingressClassName: nginx
   rules:
     - http:
         paths:
-          # Backend API — keep full /api path
           - path: /api
             pathType: Prefix
             backend:
@@ -19,7 +18,7 @@ spec:
                 port:
                   number: 5000
 
-          # Frontend SPA — catch everything else
+         
           - path: /
             pathType: Prefix
             backend:

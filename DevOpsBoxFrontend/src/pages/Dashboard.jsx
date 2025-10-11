@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-// FIX: Corrected import paths based on common project structure
 import Card from '../components/Card.jsx' 
 import { fetchStats } from '../services/api.js' 
 
-// Define colors for consistency across the dashboard and progress views
+
 const COLORS = {
   completed: '#16a34a', // Tailwind green-600 (Completed)
   pending: '#60a5fa',  // Tailwind blue-400 (Yet to Start)

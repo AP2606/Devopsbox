@@ -1,11 +1,6 @@
 const API_BASE = "/api";
 
-/**
- * Handles error responses for all API calls.
- * Attempts to extract detailed error text for better debugging.
- * @param {Response} response The fetch Response object.
- * @returns {Promise<never>} Throws an Error.
- */
+
 async function handleErrorResponse(response, action) {
   // Read the response body for detailed server error message
   const errorText = await response.text();

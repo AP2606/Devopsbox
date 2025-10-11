@@ -3,13 +3,10 @@ import psycopg2
 import sys
 import time
 
-# FIX: Corrected the unterminated string literal on the default DB_URI value.
-# The string must be terminated on the same line.
 DB_URI = os.environ.get('DB_URI', 'postgresql://postgres:postgrespw@postgres-service:5432/devopsbox')
 
 def init_db():
     print("Attempting database connection for initialization...")
-    # Add a simple retry logic in case the Postgres service is momentarily unavailable
     max_retries = 5
     for attempt in range(max_retries):
         try:
@@ -17,7 +14,7 @@ def init_db():
             cur = conn.cursor()
             print(f"Connection successful on attempt {attempt + 1}.")
             
-            # Create challenges table with all relevant fields
+            
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS challenges (
                     id SERIAL PRIMARY KEY,
@@ -29,13 +26,13 @@ def init_db():
                 );
             """)
             
-            # Check if table is empty
+            
             cur.execute("SELECT COUNT(*) FROM challenges;")
             count = cur.fetchone()[0]
             
             if count == 0:
                 print("Inserting initial challenge data...")
-                # Insert specific, detailed challenges for the DevOpsBox project
+                
                 challenges = [
                     (
                         "Fix Broken CI Pipeline",
